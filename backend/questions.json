@@ -1,0 +1,229 @@
+[
+  {
+    "id": "binomial_1",
+    "topic": "Distribución Binomial",
+    "doc_url": "https://es.wikipedia.org/wiki/Distribuci%C3%B3n_binomial",
+    "doc_summary": "La distribución binomial modela el número de éxitos en n ensayos independientes, cada uno con probabilidad p. Su fórmula es: P(X=k) = C(n,k)·p^k·(1−p)^(n−k). Se usa cuando contamos eventos discretos con dos posibles resultados (éxito/fracaso).",
+    "solver": "binomial_exact",
+    "template": "Una máquina produce artículos con probabilidad de defecto p={p:.2f}. Si se toman {n} artículos, ¿cuál es la probabilidad de exactamente {x} defectuosos?",
+    "params": {
+      "n": { "min": 5, "max": 40 },
+      "p": { "min": 0.05, "max": 0.30 },
+      "x": { "min": 0, "max": "n" }
+    }
+  },
+
+  {
+    "id": "multinomial_1",
+    "topic": "Distribución Multinomial",
+    "doc_url": "https://en.wikipedia.org/wiki/Multinomial_distribution",
+    "doc_summary": "Extiende la distribución binomial a más de dos categorías. Se usa para modelar conteos simultáneos de eventos en varias categorías (k1, k2, k3...). Su fórmula es: n! / (k1!k2!...) × p1^k1 × p2^k2 ... con p1+p2+...=1.",
+    "solver": "multinomial_prob",
+    "template": "En un ascensor UCI, las probabilidades son Covid={p1}, Omicron={p2}, N1H1={p3}. ¿Cuál es la probabilidad de que ocurran {c1} casos Covid, {c2} Omicron y {c3} N1H1?",
+    "params": {
+      "c1": { "min": 0, "max": 5 },
+      "c2": { "min": 0, "max": 5 },
+      "c3": { "min": 0, "max": 5 },
+      "p1": { "min": 0.20, "max": 0.30 },
+      "p2": { "min": 0.30, "max": 0.40 },
+      "p3": { "min": 0.30, "max": 0.40 }
+    }
+  },
+
+  {
+    "id": "torneo_1",
+    "topic": "Distribución Binomial – Torneo",
+    "doc_url": "https://es.wikipedia.org/wiki/Distribuci%C3%B3n_binomial",
+    "doc_summary": "Un torneo con partidos independientes se modela como una sucesión de ensayos Bernoulli. El número de victorias del segundo equipo sigue una binomial con p igual a la probabilidad de que el primer equipo pierda. Se calcula P(X ≥ k).",
+    "solver": "torneo_segundo_gana",
+    "template": "Dos equipos juegan {n_partidos} partidos. El segundo gana si consigue al menos {k_min} victorias. La probabilidad de que el primero gane un partido es {p}. ¿Cuál es la probabilidad de que el segundo gane el torneo?",
+    "params": {
+      "n_partidos": { "min": 3, "max": 7 },
+      "k_min": { "min": 1, "max": "n_partidos" },
+      "p": { "min": 0.40, "max": 0.70 }
+    }
+  },
+
+  {
+    "id": "poisson_1",
+    "topic": "Distribución de Poisson",
+    "doc_url": "https://www.geeksforgeeks.org/maths/poisson-distribution/",
+    "doc_summary": "La distribución de Poisson modela el número de eventos raros en un intervalo. Su parámetro λ representa el número esperado de eventos. Fórmula: P(X=k) = e^(−λ) λ^k / k!. Sirve para fallas, llegadas, decaimiento atómico, etc.",
+    "solver": "poisson_mas_de_un",
+    "template": "Una muestra contiene {n} átomos. La probabilidad de que uno decaiga en 1 minuto es {p}. ¿Cuál es la probabilidad de que más de un átomo decaiga en {t} minutos?",
+    "params": {
+      "n": { "min": 10, "max": 100 },
+      "p": { "min": 0.01, "max": 0.10 },
+      "t": { "min": 1, "max": 10 }
+    }
+  },
+
+  {
+    "id": "defectuosos_1",
+    "topic": "Distribución Binomial",
+    "doc_url": "https://es.wikipedia.org/wiki/Distribuci%C3%B3n_binomial",
+    "doc_summary": "Una variable binomial permite calcular probabilidades de intervalos como P(X > k) o P(X < m). Se suman las probabilidades de cada caso o se aplica 1 − F(k). Muy útil en control de calidad y muestreo por inspección.",
+    "solver": "probs_defectuosos",
+    "template": "Un proceso tiene prob. de defectuosos p={p_defectuosos}. Si se evalúan {n_muestra} artículos, ¿cuál es la probabilidad de que X exceda {k_excede} y de que X sea menor que {k_menor}?",
+    "params": {
+      "p_defectuosos": { "min": 0.05, "max": 0.20 },
+      "n_muestra": { "min": 50, "max": 200 },
+      "k_excede": { "min": 1, "max": "n_muestra" },
+      "k_menor": { "min": 0, "max": "n_muestra" }
+    }
+  },
+
+  {
+    "id": "exp_1",
+    "topic": "Distribución Exponencial",
+    "doc_url": "https://en.wikipedia.org/wiki/Exponential_distribution",
+    "doc_summary": "Modela tiempos entre eventos cuando ocurren a una tasa constante λ. Su función de supervivencia es S(t)=e^(−λt). Es la distribución básica de tiempos de vida sin memoria: el futuro no depende del pasado.",
+    "solver": "prob_falla_antes",
+    "template": "La tasa de falla es {tasa} por hora. ¿Cuál es la probabilidad de que falle antes de {horas} horas?",
+    "params": {
+      "tasa": { "min": 0.01, "max": 0.20 },
+      "horas": { "min": 1, "max": 10 }
+    }
+  },
+
+  {
+    "id": "weibull_1",
+    "topic": "Distribución Weibull",
+    "doc_url": "https://en.wikipedia.org/wiki/Weibull_distribution",
+    "doc_summary": "Weibull es usada para modelar tiempos de vida con diferentes patrones de falla. Su forma depende de β: si β<1 fallas tempranas, β=1 exponencial, β>1 envejecimiento. Es fundamental en ingeniería de confiabilidad.",
+    "solver": "prob_bateria_operacion",
+    "template": "Una batería tiene una vida con Weibull(alpha={alpha}, beta={beta}). ¿Cuál es la probabilidad de que siga operando después de {anos} años?",
+    "params": {
+      "alpha": { "min": 0.1, "max": 3.0 },
+      "beta": { "min": 0.5, "max": 5.0 },
+      "anos": { "min": 0.1, "max": 10.0 }
+    }
+  },
+
+  {
+    "id": "normal_1",
+    "topic": "Distribución Normal",
+    "doc_url": "https://es.wikipedia.org/wiki/Distribuci%C3%B3n_normal",
+    "doc_summary": "La distribución normal modela variables continuas con simetría alrededor de la media µ. Su desviación σ mide la dispersión. Para intervalos se usan valores Z = (x−µ)/σ y la tabla normal estándar.",
+    "solver": "prob_bateria_entre",
+    "template": "Las baterías siguen una N({media_horas}, {desviacion_horas}). ¿Cuál es la probabilidad de que duren entre {t_min} y {t_max} horas?",
+    "params": {
+      "media_horas": { "min": 30, "max": 80 },
+      "desviacion_horas": { "min": 2, "max": 10 },
+      "t_min": { "min": 20, "max": 40 },
+      "t_max": { "min": 50, "max": 90 }
+    }
+  },
+
+  {
+    "id": "resistores_1",
+    "topic": "Distribución Multinomial",
+    "doc_url": "https://en.wikipedia.org/wiki/Multinomial_distribution",
+    "doc_summary": "En una multinomial, la media de cada categoría es n·pi y la varianza es n·pi·(1−pi). Las covarianzas entre categorías son negativas: −n·pi·pj, porque al aumentar una, bajan las otras.",
+    "solver": "media_var_resistores",
+    "template": "Con P0={p_0}, P1={p_1}, P2={p_2}, halle media y varianza del número de resistores correctos.",
+    "params": {
+      "p_0": { "min": 0, "max": 0.5 },
+      "p_1": { "min": 0.2, "max": 0.7 },
+      "p_2": { "min": 0.1, "max": 0.6 }
+    }
+  },
+
+  {
+    "id": "comisiones_1",
+    "topic": "Valor Esperado",
+    "doc_url": "https://es.wikipedia.org/wiki/Esperanza_matem%C3%A1tica",
+    "doc_summary": "El valor esperado representa el promedio ponderado de los posibles resultados: E(X)=Σ p_i·x_i. En decisiones económicas permite encontrar la ganancia media a largo plazo.",
+    "solver": "valor_esperado_comisiones",
+    "template": "El agente tiene probabilidades p1={p_exito_1}, p2={p_exito_2} y comisiones c1={comision_1}, c2={comision_2}. ¿Cuál es el valor esperado de comisiones?",
+    "params": {
+      "p_exito_1": { "min": 0, "max": 1 },
+      "comision_1": { "min": 10, "max": 200 },
+      "p_exito_2": { "min": 0, "max": 1 },
+      "comision_2": { "min": 10, "max": 200 }
+    }
+  },
+
+  {
+    "id": "utilidad_1",
+    "topic": "Optimización",
+    "doc_url": "https://en.wikipedia.org/wiki/Optimization_(mathematics)",
+    "doc_summary": "Optimizar una función consiste en encontrar su valor máximo o mínimo. Cuando hay una función de utilidad con costo cuadrático, suele maximizarse derivando e igualando a cero.",
+    "solver": "utilidad_maxima",
+    "template": "Un dron tiene ingreso por hora {tasa} y costo cuadrático {costo}. ¿Cuál es la utilidad esperada máxima?",
+    "params": {
+      "tasa": { "min": 5, "max": 30 },
+      "costo": { "min": 1, "max": 10 }
+    }
+  },
+
+  {
+    "id": "esferas_1",
+    "topic": "Distribución Normal",
+    "doc_url": "https://es.wikipedia.org/wiki/Distribuci%C3%B3n_normal",
+    "doc_summary": "Para calcular la proporción dentro de una especificación [L, U], se obtienen Z_L y Z_U y luego P(L < X < U) = Φ(Z_U) − Φ(Z_L). Es muy usado en control de calidad.",
+    "solver": "proporcion_esferas",
+    "template": "Las esferas tienen media {media}, desviación {desviacion}, y especificación {centro}±{tolerancia}. ¿Qué proporción cumple la especificación?",
+    "params": {
+      "media": { "min": 2.4, "max": 2.6 },
+      "desviacion": { "min": 0.005, "max": 0.02 },
+      "centro": { "min": 2.45, "max": 2.55 },
+      "tolerancia": { "min": 0.005, "max": 0.015 }
+    }
+  },
+
+  {
+    "id": "hiper_1",
+    "topic": "Distribución Hipergeométrica",
+    "doc_url": "https://es.wikipedia.org/wiki/Distribuci%C3%B3n_hipergeom%C3%A9trica",
+    "doc_summary": "Se usa cuando se extraen elementos sin reemplazo. Media = n·K/N y varianza = n(K/N)(1−K/N)((N−n)/(N−1)). Muy importante en muestreo y calidad.",
+    "solver": "hiper_media_var",
+    "template": "En un lote de {n_total} componentes, {n_buenos} son buenos. Si se inspeccionan {n_muestra}, halle la media y varianza del número de buenos en la muestra.",
+    "params": {
+      "n_total": { "min": 3, "max": 50 },
+      "n_buenos": { "min": 0, "max": "n_total" },
+      "n_muestra": { "min": 1, "max": "n_total" }
+    }
+  },
+
+  {
+    "id": "binomial_2",
+    "topic": "Distribución Binomial",
+    "doc_url": "https://es.wikipedia.org/wiki/Distribuci%C3%B3n_binomial",
+    "doc_summary": "P(X ≥ k) en una binomial se obtiene sumando desde k hasta n, o usando 1−F(k−1). Muy útil cuando se desea determinar mínimos niveles de calidad o éxito.",
+    "solver": "binomial_al_menos",
+    "template": "Una máquina produce piezas correctas con probabilidad p={p}. Si se inspeccionan {n} piezas, ¿cuál es la probabilidad de obtener al menos {k} piezas correctas?",
+    "params": {
+      "n": { "min": 10, "max": 60 },
+      "p": { "min": 0.6, "max": 0.95 },
+      "k": { "min": 1, "max": "n" }
+    }
+  },
+
+  {
+    "id": "poisson_2",
+    "topic": "Distribución de Poisson",
+    "doc_url": "https://www.scribbr.com/statistics/poisson-distribution/",
+    "doc_summary": "Para un conteo exacto P(X=k) se usa la fórmula básica de Poisson. Es muy útil para llegadas de clientes, llamadas y eventos aleatorios en tiempo.",
+    "solver": "poisson_exacto",
+    "template": "En un centro de llamadas llegan en promedio {lambda_} llamadas por minuto. ¿Cuál es la probabilidad de recibir exactamente {k} llamadas en un minuto?",
+    "params": {
+      "lambda_": { "min": 0.5, "max": 5.0 },
+      "k": { "min": 0, "max": 10 }
+    }
+  },
+
+  {
+    "id": "normal_2",
+    "topic": "Distribución Normal",
+    "doc_url": "https://es.wikipedia.org/wiki/Distribuci%C3%B3n_normal",
+    "doc_summary": "Para hallar P(X > a), se convierte a Z = (a−µ)/σ y se usa la tabla normal: P(X>a)=1−Φ(Z). Fundamental en procesos industriales y control de calidad.",
+    "solver": "normal_mayor_que",
+    "template": "Un proceso industrial produce longitudes con distribución normal N({mu}, {sigma}). ¿Cuál es la probabilidad de que una pieza mida más de {limite} unidades?",
+    "params": {
+      "mu": { "min": 20, "max": 100 },
+      "sigma": { "min": 2, "max": 20 },
+      "limite": { "min": 10, "max": 120 }
+    }
+  }
+]
