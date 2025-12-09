@@ -1,12 +1,18 @@
-from math import comb
+# solvers/binomial_al_menos.py
 
-def binomial_al_menos(n: int, p: float, k: int) -> float:
-    if not (0 <= p <= 1):
-        raise ValueError("p debe estar entre 0 y 1")
-    if not (0 <= k <= n):
-        raise ValueError("k debe cumplir 0 <= k <= n")
-    q = 1 - p
-    total = 0
-    for i in range(k, n + 1):
-        total += comb(n, i) * (p ** i) * (q ** (n - i))
-    return total
+from typing import Dict, Any
+from utils.render import render_math_result
+
+def solve_binomial_al_menos(question_def: Dict[str, Any], params: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Solver unificado usando expression_symbolic y render_math_result()
+    para P(X >= k).
+    """
+    output = {}
+
+    # iteramos por los math results del JSON
+    for math_def in question_def["math"]["results"]:
+        rendered = render_math_result(math_def, params)
+        output[math_def["id"]] = rendered
+
+    return output

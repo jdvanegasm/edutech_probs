@@ -1,5 +1,16 @@
-from math import comb
+# solvers/binomial.py
 
-def binomial_exact(n: int, p: float, x: int) -> float:
-    """Calcula P(X = x) para una distribución binomial."""
-    return comb(n, x) * (p ** x) * ((1 - p) ** (n - x))
+from typing import Dict, Any
+from utils.render import render_math_result
+
+def solve_binomial_exact(question_def: Dict[str, Any], params: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Usa render_math_result para calcular P(X = x)
+    """
+    output = {}
+
+    for math_def in question_def["math"]["results"]:
+        rendered = render_math_result(math_def, params)
+        output[math_def["id"]] = rendered
+
+    return output

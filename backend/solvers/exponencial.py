@@ -1,16 +1,17 @@
-from math import exp
+# solvers/exponencial.py
 
-def prob_falla_antes(**params) -> float:
+from typing import Dict, Any
+from utils.render import render_math_result
+
+def solve_prob_falla_antes(question_def: Dict[str, Any], params: Dict[str, Any]) -> Dict[str, Any]:
     """
-    P(T < t) = 1 - exp(-lambda * t)
+    Usa expression_symbolic para:
+      P(T < t) = 1 - exp(-lambda * t)
     """
+    output = {}
 
-    tasa = float(params.get("tasa"))
-    horas = float(params.get("horas"))
+    for math_def in question_def["math"]["results"]:
+        rendered = render_math_result(math_def, params)
+        output[math_def["id"]] = rendered
 
-    if tasa < 0:
-        raise ValueError("tasa >= 0")
-    if horas < 0:
-        raise ValueError("horas >= 0")
-
-    return 1 - exp(-tasa * horas)
+    return output

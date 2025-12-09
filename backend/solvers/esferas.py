@@ -1,16 +1,16 @@
-from math import erf, sqrt
+# solvers/esferas.py
 
-def proporcion_esferas(media: float, desviacion: float, centro: float, tolerancia: float) -> float:
-    if desviacion <= 0:
-        raise ValueError("desviacion debe ser > 0")
-    if tolerancia < 0:
-        raise ValueError("tolerancia debe ser >= 0")
+from typing import Dict, Any
+from utils.render import render_math_result
 
-    a = centro - tolerancia
-    b = centro + tolerancia
+def solve_proporcion_esferas(question_def: Dict[str, Any], params: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Proporción en especificación usando expression_symbolic
+    """
+    output = {}
 
-    def normal_cdf(x):
-        z = (x - media) / desviacion
-        return 0.5 * (1 + erf(z / sqrt(2)))
+    for math_def in question_def["math"]["results"]:
+        rendered = render_math_result(math_def, params)
+        output[math_def["id"]] = rendered
 
-    return normal_cdf(b) - normal_cdf(a)
+    return output

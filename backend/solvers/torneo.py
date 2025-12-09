@@ -1,37 +1,16 @@
-from math import comb
+# solvers/torneo.py
 
-def torneo_segundo_gana(**params) -> float:
+from typing import Dict, Any
+from utils.render import render_math_result
+
+def solve_torneo_segundo_gana(question_def: Dict[str, Any], params: Dict[str, Any]) -> Dict[str, Any]:
     """
-    Solver compatible con FastAPI. Espera:
-    - n_partidos
-    - k_min
-    - p   (prob de que gane el PRIMER equipo)
-
-    Retorna: Probabilidad de que el SEGUNDO gane el torneo.
+    Prob segundo gana = sum desde k_min a n de binom(n, x)(1-p)^x p^(n-x)
     """
+    output = {}
 
-    n_partidos = int(params.get("n_partidos"))
-    k_min = int(params.get("k_min"))
-    p = float(params.get("p"))  # prob de que el PRIMER equipo gane
+    for math_def in question_def["math"]["results"]:
+        rendered = render_math_result(math_def, params)
+        output[math_def["id"]] = rendered
 
-    # Validaciones
-    if n_partidos <= 0:
-        raise ValueError("n_partidos debe ser > 0")
-
-    if not (0 <= k_min <= n_partidos):
-        raise ValueError("k_min debe estar entre 0 y n_partidos")
-
-    if not (0 <= p <= 1):
-        raise ValueError("p debe estar entre 0 y 1")
-
-    # Probabilidad que el segundo gane un partido
-    p_segundo = 1 - p
-    q_segundo = 1 - p_segundo
-
-    prob_total = 0.0
-
-    # Sumar P(X = i) para i = k_min .. n
-    for i in range(k_min, n_partidos + 1):
-        prob_total += comb(n_partidos, i) * (p_segundo ** i) * (q_segundo ** (n_partidos - i))
-
-    return prob_total
+    return output

@@ -92,7 +92,7 @@ export default function Home() {
           <br />
           Año <strong>2025 - 3</strong>.
           <br />
-          Para la asignatura de <strong>Probabilidad</strong> con el docente <strong>Fernando Leon</strong>.
+          Para la asignatura de <strong>Probabilidad</strong> con el docente <strong>Fernando Leon Pradera</strong>.
           <br />
           <strong>Ingeniería de Sistemas</strong> - Facultad de Ingeniería.
         </p>

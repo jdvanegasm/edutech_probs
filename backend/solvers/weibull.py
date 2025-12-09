@@ -1,19 +1,16 @@
-from math import exp
+# solvers/weibull.py
 
-def prob_bateria_operacion(**params) -> float:
+from typing import Dict, Any
+from utils.render import render_math_result
+
+def solve_prob_bateria_operacion(question_def: Dict[str, Any], params: Dict[str, Any]) -> Dict[str, Any]:
     """
-    P(T > t) = exp(-(t / alpha) ** beta)
+    P(T > t) = exp(-(t/alpha)^beta)
     """
+    output = {}
 
-    alpha = float(params.get("alpha"))
-    beta = float(params.get("beta"))
-    anos = float(params.get("anos"))
+    for math_def in question_def["math"]["results"]:
+        rendered = render_math_result(math_def, params)
+        output[math_def["id"]] = rendered
 
-    if alpha <= 0:
-        raise ValueError("alpha debe ser > 0")
-    if beta <= 0:
-        raise ValueError("beta debe ser > 0")
-    if anos < 0:
-        raise ValueError("anos >= 0")
-
-    return exp(-(anos / alpha) ** beta)
+    return output

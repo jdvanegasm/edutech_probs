@@ -1,13 +1,16 @@
-def utilidad_maxima(tasa: float, costo: float) -> float:
+# solvers/utilidad.py
+
+from typing import Dict, Any
+from utils.render import render_math_result
+
+def solve_utilidad_maxima(question_def: Dict[str, Any], params: Dict[str, Any]) -> Dict[str, Any]:
     """
-    Calcula la utilidad máxima U(μ) = tasa*μ - costo*μ^2.
-    Retorna SOLO la utilidad máxima.
+    Umax = tasa^2 / (4*costo).
     """
+    output = {}
 
-    if costo <= 0:
-        raise ValueError("costo debe ser > 0")
+    for math_def in question_def["math"]["results"]:
+        rendered = render_math_result(math_def, params)
+        output[math_def["id"]] = rendered
 
-    mu_opt = tasa / (2 * costo)
-    utilidad = tasa * mu_opt - costo * (mu_opt ** 2)
-
-    return utilidad
+    return output

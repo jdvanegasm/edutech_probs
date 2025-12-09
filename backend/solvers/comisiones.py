@@ -1,18 +1,17 @@
-from typing import Any
+# solvers/comisiones.py
 
-def valor_esperado_comisiones(**params) -> float:
+from typing import Dict, Any
+from utils.render import render_math_result
+
+def solve_valor_esperado_comisiones(question_def: Dict[str, Any], params: Dict[str, Any]) -> Dict[str, Any]:
     """
-    E = p1*c1 + p2*c2
+    Valor esperado: E = p1*c1 + p2*c2
+    Todo viene del expression_symbolic.
     """
+    output = {}
 
-    p1 = float(params.get("p_exito_1"))
-    p2 = float(params.get("p_exito_2"))
-    c1 = float(params.get("comision_1"))
-    c2 = float(params.get("comision_2"))
+    for math_def in question_def["math"]["results"]:
+        rendered = render_math_result(math_def, params)
+        output[math_def["id"]] = rendered
 
-    if not (0 <= p1 <= 1):
-        raise ValueError("p_exito_1 fuera de rango")
-    if not (0 <= p2 <= 1):
-        raise ValueError("p_exito_2 fuera de rango")
-
-    return p1 * c1 + p2 * c2
+    return output
