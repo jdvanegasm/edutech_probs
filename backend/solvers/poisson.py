@@ -1,34 +1,16 @@
-from math import exp
+# solvers/poisson.py
 
-def poisson_mas_de_un(**params) -> float:
+from typing import Dict, Any
+from utils.render import render_math_result
+
+def solve_poisson_mas_de_un(question_def: Dict[str, Any], params: Dict[str, Any]) -> Dict[str, Any]:
     """
-    Solver compatible con FastAPI: recibe params planos y los extrae:
-
-    Espera:
-    - n  = número de átomos
-    - p  = prob de decaimiento en 1 minuto
-    - t  = tiempo en minutos
-
-    Calcula:
-    P(X > 1) = 1 - e^{-λ} (1 + λ)
-    con λ = n * p * t
+    P(X > 1) = 1 - exp(-lam)(1+lam), con lam = n*p*t
     """
+    output = {}
 
-    # Obtener valores del JSON
-    n = int(params.get("n"))
-    p = float(params.get("p"))
-    t = float(params.get("t"))
+    for math_def in question_def["math"]["results"]:
+        rendered = render_math_result(math_def, params)
+        output[math_def["id"]] = rendered
 
-    # Validaciones
-    if n < 0:
-        raise ValueError("n debe ser >= 0")
-    if not (0 <= p <= 1):
-        raise ValueError("p debe estar entre 0 y 1")
-    if t < 0:
-        raise ValueError("t debe ser >= 0")
-
-    # Parámetro Poisson
-    lmbda = n * p * t
-
-    # Fórmula final
-    return 1 - exp(-lmbda) * (1 + lmbda)
+    return output

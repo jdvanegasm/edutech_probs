@@ -1,8 +1,17 @@
-from math import exp, factorial
+# solvers/poisson_exacto.py
 
-def poisson_exacto(lambda_: float, k: int) -> float:
-    if lambda_ < 0:
-        raise ValueError("lambda debe ser >= 0")
-    if k < 0:
-        raise ValueError("k debe ser >= 0")
-    return exp(-lambda_) * (lambda_ ** k) / factorial(k)
+from typing import Dict, Any
+from utils.render import render_math_result
+
+def solve_poisson_exacto(question_def: Dict[str, Any], params: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    P(X = k) usando expression_symbolic:
+        exp(-lambda_) * lambda_**k / factorial(k)
+    """
+    output = {}
+
+    for math_def in question_def["math"]["results"]:
+        rendered = render_math_result(math_def, params)
+        output[math_def["id"]] = rendered
+
+    return output

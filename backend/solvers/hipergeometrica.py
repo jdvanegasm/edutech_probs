@@ -1,22 +1,19 @@
-def hiper_media_var(n_total: int, n_buenos: int, n_muestra: int) -> dict:
+# solvers/hipergeometrica.py
+
+from typing import Dict, Any
+from utils.render import render_math_result
+
+def solve_hiper_media_var(question_def: Dict[str, Any], params: Dict[str, Any]) -> Dict[str, Any]:
     """
-    Retorna {"media": ..., "varianza": ...}
+    Produce:
+      - media_hipergeometrica
+      - var_hipergeometrica
+    Todo desde expression_symbolic.
     """
+    output = {}
 
-    if not (0 < n_muestra <= n_total):
-        raise ValueError("0 < n_muestra <= n_total")
-    if not (0 <= n_buenos <= n_total):
-        raise ValueError("0 <= n_buenos <= n_total")
-    if n_total <= 1:
-        raise ValueError("n_total debe ser > 1")
+    for math_def in question_def["math"]["results"]:
+        rendered = render_math_result(math_def, params)
+        output[math_def["id"]] = rendered
 
-    N = n_total
-    K = n_buenos
-    n = n_muestra
-
-    p = K / N
-
-    media = n * p
-    varianza = n * p * (1 - p) * (N - n) / (N - 1)
-
-    return {"media": media, "varianza": varianza}
+    return output

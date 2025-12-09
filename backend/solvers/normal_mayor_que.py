@@ -1,8 +1,17 @@
-from math import erf, sqrt
+# solvers/normal_mayor_que.py
 
-def normal_mayor_que(mu: float, sigma: float, limite: float) -> float:
-    if sigma <= 0:
-        raise ValueError("sigma debe ser > 0")
-    z = (limite - mu) / sigma
-    cdf = 0.5 * (1 + erf(z / sqrt(2)))
-    return 1 - cdf
+from typing import Dict, Any
+from utils.render import render_math_result
+
+def solve_normal_mayor_que(question_def: Dict[str, Any], params: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    P(X > limite) = 1 - Phi((limite - mu)/sigma)
+    Todo viene del JSON.
+    """
+    output = {}
+
+    for math_def in question_def["math"]["results"]:
+        rendered = render_math_result(math_def, params)
+        output[math_def["id"]] = rendered
+
+    return output

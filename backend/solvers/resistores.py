@@ -1,41 +1,18 @@
-from typing import Dict
+# solvers/resistores.py
 
-def media_var_resistores(**params) -> Dict[str, float]:
+from typing import Dict, Any
+from utils.render import render_math_result
+
+def solve_resistores_media_var(question_def: Dict[str, Any], params: Dict[str, Any]) -> Dict[str, Any]:
     """
-    Calcula media y varianza de X con:
-    P(X=0) = p0
-    P(X=1) = p1
-    P(X=2) = p2
+    E[X] = p1 + 2p2
+    Var(X) = EX2 - EX^2
+    Todo sale del symbolic.
     """
+    output = {}
 
-    p0 = float(params.get("p_0"))
-    p1 = float(params.get("p_1"))
-    p2 = float(params.get("p_2"))
+    for math_def in question_def["math"]["results"]:
+        rendered = render_math_result(math_def, params)
+        output[math_def["id"]] = rendered
 
-    # Validaciones
-    for p in (p0, p1, p2):
-        if not (0 <= p <= 1):
-            raise ValueError("Probabilidades deben estar entre 0 y 1")
-
-    total = p0 + p1 + p2
-    if total == 0:
-        raise ValueError("Suma de probabilidades no puede ser 0")
-
-    # Normalizamos si no suma exactamente 1
-    p0 /= total
-    p1 /= total
-    p2 /= total
-
-    # Media
-    media = p1 * 1 + p2 * 2
-
-    # E[X²]
-    ex2 = p1 * 1 + p2 * 4
-
-    # Varianza
-    var = ex2 - media**2
-
-    return {
-        "media": media,
-        "varianza": var
-    }
+    return output

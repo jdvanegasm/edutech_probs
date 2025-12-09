@@ -1,0 +1,10 @@
+#!/bin/sh
+'''exec' "/home/nous/Documents/Universidad/Universidad Distrital/7th_semester_2025_3/probs/edutech_probs/backend/.venv/bin/python" "$0" "$@"
+' '''
+# -*- coding: utf-8 -*-
+import re
+import sys
+from uvicorn.main import main
+if __name__ == '__main__':
+    sys.argv[0] = re.sub(r'(-script\.pyw|\.exe)?$', '', sys.argv[0])
+    sys.exit(main())

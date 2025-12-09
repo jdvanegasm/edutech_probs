@@ -5,13 +5,25 @@ from typing import Dict, Any
 from fastapi.middleware.cors import CORSMiddleware
 
 from models.question_models import (
-    ProblemRequest, GeneratedProblem,
-    TestRequest, GradeRequest, GradeResponse
+    ProblemRequest,
+    TestRequest,
+    GradeRequest,
+    GradeResponse,
+    QuestionDefinition,
+    ComputedResult,
+    GeneratedProblemLatex
 )
-from solvers import SOLVERS
-from utils.clean_params import clean_params
 
-app = FastAPI(title="API Probabilidad", version="0.1")
+from solvers import SOLVER_REGISTRY
+from utils.clean_params import clean_params_for_question
+from utils.render import render_template, render_math_result
+
+
+# ======================================
+# FASTAPI INIT
+# ======================================
+app = FastAPI(title="API Probabilidad LaTeX", version="2.0")
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -21,224 +33,193 @@ app.add_middleware(
 )
 
 
-# ---------------------------------------------------
+# ======================================
 # CARGAR QUESTIONS JSON
-# ---------------------------------------------------
+# ======================================
 with open("questions.json", "r") as f:
-    QUESTIONS = {q["id"]: q for q in json.load(f)}
+    raw = json.load(f)
+
+QUESTIONS: Dict[str, QuestionDefinition] = {
+    q["id"]: QuestionDefinition.model_validate(q) for q in raw
+}
 
 
-# ---------------------------------------------------
-# HELPERS
-# ---------------------------------------------------
-def render_statement(template: str, params: Dict[str, Any]) -> str:
-    return template.format(**params)
+# ======================================
+# GENERACIÓN DE PARÁMETROS
+# ======================================
+def generate_params_for_question(q: QuestionDefinition) -> Dict[str, Any]:
+    params: Dict[str, Any] = {}
 
+    for name, cfg in q.params.items():
 
-def generate_params(q):
-    params = {}
+        def resolve(val):
+            if isinstance(val, str) and val in params:
+                return params[val]
+            return val
 
-    for key, rule in q["params"].items():
+        min_v = resolve(cfg.min)
+        max_v = resolve(cfg.max)
 
-        # min dinámico
-        if isinstance(rule["min"], str) and rule["min"] in params:
-            min_v = params[rule["min"]]
+        if cfg.type == "int":
+            params[name] = random.randint(int(min_v), int(max_v))
         else:
-            min_v = rule["min"]
-
-        # max dinámico
-        if isinstance(rule["max"], str) and rule["max"] in params:
-            max_v = params[rule["max"]]
-        else:
-            max_v = rule["max"]
-
-        # int o float
-        if isinstance(min_v, int) and isinstance(max_v, int):
-            params[key] = random.randint(min_v, max_v)
-        else:
-            params[key] = random.uniform(min_v, max_v)
+            params[name] = random.uniform(float(min_v), float(max_v))
 
     return params
 
 
-def solver_returns_number(solver_fn):
-    numeric_solvers = {
-        "binomial_exact",
-        "poisson_mas_de_un",
-        "prob_falla_antes",
-        "prob_bateria_operacion",
-        "prob_bateria_entre",
-        "normal_mayor_que",
-        "poisson_exacto",
-        "binomial_al_menos",
-        "torneo_segundo_gana",
-        "utilidad_maxima",
-        "proporcion_esferas",
-    }
-    return solver_fn.__name__ in numeric_solvers
+# ======================================
+# CRITERIO PARA USO EN TEST
+# ======================================
+def solver_is_numeric(q: QuestionDefinition) -> bool:
+    """Una pregunta sirve para test si tiene UN solo resultado matemático."""
+    return len(q.math.results) == 1
 
 
-# ---------------------------------------------------
+# ======================================
 # ENDPOINTS
-# ---------------------------------------------------
+# ======================================
 
 @app.get("/")
 def root():
-    return {"message": "Backend de Probabilidad funcionando!"}
+    return {"message": "Backend Probabilidad LaTeX v2 funcionando!"}
 
 
-# --------------------------
-# LIST QUESTIONS (CON DOCS)
-# --------------------------
 @app.get("/questions")
 def list_questions():
     return [
-        {
-            "id": qid,
-            "topic": data["topic"],
-            "doc_url": data.get("doc_url"),
-            "doc_summary": data.get("doc_summary")
-        }
-        for qid, data in QUESTIONS.items()
+        {"id": qid, "topic": q.topic, "doc_url": q.doc_url}
+        for qid, q in QUESTIONS.items()
     ]
 
 
-# --------------------------
-# GENERATE PROBLEM (PRACTICE/MODE REPASO)
-# Devuelve doc_url y doc_summary
-# --------------------------
+# ======================================
+# GENERATE PROBLEM
+# ======================================
 @app.post("/generate-problem")
 def generate_problem(req: ProblemRequest):
+
     q = QUESTIONS[req.id]
 
-    # parámetros
-    params = req.params_override or generate_params(q)
-    params = clean_params(params, q["solver"])
+    # 1. parámetros
+    params = req.params_override or generate_params_for_question(q)
+    params = clean_params_for_question(q, params)
 
-    # enunciado
-    statement = render_statement(q["template"], params)
+    # 2. enunciado
+    statement = render_template(q.template, params)
 
-    # si es repaso, resolver
-    correct_answer = None
-    if req.mode == "repaso":
-        solver_fn = SOLVERS[q["solver"]]
-        correct_answer = solver_fn(**params)
+    # 3. Procesar resultados matemáticos
+    results_output = []
+    for r in q.math.results:
+        # AHORA se pasa q
+        rendered = render_math_result(r.model_dump(), params, q)
 
-    # devolvemos flexible (NO usamos GeneratedProblem porque no soporta doc_url)
-    return {
-        "id": req.id,
-        "statement": statement,
-        "params": params,
-        "correct_answer": correct_answer,
-        "doc_url": q.get("doc_url"),
-        "doc_summary": q.get("doc_summary")
-    }
-
-
-# --------------------------
-# GENERATE TEST (sin ayudas)
-# --------------------------
-@app.post("/generate-test")
-def generate_test(req: TestRequest):
-    # 1. filtrar solo solvers adecuados para tests (numéricos)
-    valid_ids = [
-        qid for qid, q in QUESTIONS.items()
-        if solver_returns_number(SOLVERS[q["solver"]])
-    ]
-
-    if req.num_questions > len(valid_ids):
-        raise ValueError(
-            f"No hay suficientes preguntas numéricas. "
-            f"Solicitaste {req.num_questions}, pero solo hay {len(valid_ids)} disponibles."
+        results_output.append(
+            ComputedResult(
+                result_id=rendered["id"],
+                label=rendered["label"],
+                general_formula_latex=rendered["general_formula_latex"],
+                instantiated_expression_latex=rendered["expression_latex"],
+                numeric_result=rendered["raw_numeric"],
+                numeric_result_formatted=rendered["numeric_value"],
+            )
         )
 
-    # 2. Selección
+    return GeneratedProblemLatex(
+        id=q.id,
+        topic=q.topic,
+        statement=statement,
+        doc_url=q.doc_url,
+        doc_summary=q.doc_summary,
+        params=params,
+        results=results_output
+    )
+
+
+# ======================================
+# GENERATE TEST
+# ======================================
+@app.post("/generate-test")
+def generate_test(req: TestRequest):
+
+    valid_ids = [qid for qid, q in QUESTIONS.items() if solver_is_numeric(q)]
+
+    if req.num_questions > len(valid_ids):
+        raise ValueError("No hay suficientes preguntas numéricas para test.")
+
     selected = random.sample(valid_ids, req.num_questions)
-    questions_output = []
+    output = []
 
     for qid in selected:
         q = QUESTIONS[qid]
 
-        params = generate_params(q)
-        params = clean_params(params, q["solver"])
+        params = generate_params_for_question(q)
+        params = clean_params_for_question(q, params)
 
-        statement = render_statement(q["template"], params)
-        correct = SOLVERS[q["solver"]](**params)
+        statement = render_template(q.template, params)
 
-        spread = abs(correct) * 0.2 if correct != 0 else 0.1
+        # Solo 1 resultado
+        r = q.math.results[0]
+
+        # AHORA se pasa q
+        rendered = render_math_result(r.model_dump(), params, q)
+
+        correct_val = rendered["numeric_value"]
+        raw = rendered["raw_numeric"]
+
+        spread = abs(raw) * 0.2 if raw != 0 else 0.1
+
         options = [
-            correct,
-            correct + random.uniform(-spread, spread),
-            correct + random.uniform(-spread, spread),
-            correct + random.uniform(-spread, spread)
+            correct_val,
+            f"{raw + random.uniform(-spread, spread):.5f}",
+            f"{raw + random.uniform(-spread, spread):.5f}",
+            f"{raw + random.uniform(-spread, spread):.5f}",
         ]
+
         random.shuffle(options)
 
-        questions_output.append({
+        output.append({
             "id": qid,
-            "topic": q["topic"],
+            "topic": q.topic,
             "statement": statement,
+            "params": params,
             "options": options,
-            "correct": correct,
-            "doc_url": q.get("doc_url"),
-            "doc_summary": q.get("doc_summary")
+            "correct": correct_val,
         })
 
-    return {"questions": questions_output}
+    return {"questions": output}
 
 
-# --------------------------
+# ======================================
 # GRADE TEST
-# --------------------------
+# ======================================
 @app.post("/grade-test", response_model=GradeResponse)
 def grade_test(req: GradeRequest):
+
     total = len(req.answers)
-    correct_count = 0
+    correct = 0
     details = []
 
-    for ans in req.answers:
-        is_correct = abs(ans.selected - ans.correct) < 1e-6
-        if is_correct:
-            correct_count += 1
+    for a in req.answers:
+        is_ok = abs(a.selected - a.correct) < 1e-6
+        if is_ok:
+            correct += 1
 
         details.append({
-            "id": ans.id,
-            "selected": ans.selected,
-            "correct": ans.correct,
-            "is_correct": is_correct
+            "id": a.id,
+            "selected": a.selected,
+            "correct": a.correct,
+            "is_correct": is_ok
         })
 
-    score = round((correct_count / total) * 100, 2)
+    score = round(correct / total * 100, 2)
+
     return GradeResponse(score=score, details=details)
 
 
-# --------------------------
+# ======================================
 # TOPICS
-# --------------------------
+# ======================================
 @app.get("/topics")
 def list_topics():
-    topics = sorted(list({q["topic"] for q in QUESTIONS.values()}))
-    return {"topics": topics}
-
-
-# --------------------------
-# QUESTIONS BY TOPIC (CON DOCS)
-# --------------------------
-@app.get("/questions/by-topic/{topic}")
-def questions_by_topic(topic: str):
-    return [
-        {
-            "id": qid,
-            "topic": data["topic"],
-            "doc_url": data.get("doc_url"),
-            "doc_summary": data.get("doc_summary")
-        }
-        for qid, data in QUESTIONS.items()
-        if data["topic"].lower() == topic.lower()
-    ]
-
-
-# FULL QUESTIONS
-@app.get("/questions/full")
-def list_full_questions():
-    return list(QUESTIONS.values())
+    return {"topics": sorted({q.topic for q in QUESTIONS.values()})}

@@ -1,5 +1,11 @@
 import { useEffect } from "react";
 import { useLocation } from "react-router-dom";
+import TeX from "@matejmazur/react-katex";
+
+// Detectar si un texto contiene LaTeX
+function isLatex(text) {
+  return /\\|\\$|\\^|\\_/.test(text);
+}
 
 // Cargar Chart.js dinámicamente
 function loadChartJs() {
@@ -36,10 +42,10 @@ export default function TestResolve() {
   const correctCounts = topics.map((t) => topicStats[t].correct);
   const wrongCounts = topics.map((t) => topicStats[t].wrong);
 
-  // Dibujar gráficas
+  // Gráficas
   useEffect(() => {
     loadChartJs().then(() => {
-      /** Pie Chart **/
+
       new window.Chart(document.getElementById("pieChart"), {
         type: "pie",
         data: {
@@ -53,11 +59,9 @@ export default function TestResolve() {
               backgroundColor: ["#28A745", "#DC3545"]
             }
           ]
-        },
-        options: { responsive: true }
+        }
       });
 
-      /** Bar Chart **/
       new window.Chart(document.getElementById("barChart"), {
         type: "bar",
         data: {
@@ -110,6 +114,7 @@ export default function TestResolve() {
         >
           {results.score}%
         </div>
+
         <p style={{ marginTop: "10px", fontSize: "16px", color: "#666" }}>
           {results.score >= 60
             ? "Excelente trabajo, sigue así 💪"
@@ -157,10 +162,18 @@ export default function TestResolve() {
               animation: "fadeIn 0.2s ease"
             }}
           >
+            {/* Enunciado seguro */}
             <p style={{ fontSize: "17px", marginBottom: "10px" }}>
-              <strong>{idx + 1}. {q.statement}</strong>
+              <strong>{idx + 1}. </strong>
+
+              {isLatex(q.statement) ? (
+                <TeX block math={q.statement} />
+              ) : (
+                <span>{q.statement}</span>
+              )}
             </p>
 
+            {/* Respuestas */}
             <p style={{ marginBottom: "10px" }}>
               <strong>Seleccionado:</strong> {d.selected} <br />
               <strong>Correcto:</strong> {d.correct}
