@@ -1,5 +1,6 @@
 # utils/render.py
 
+import ast
 import math
 from decimal import Decimal, ROUND_HALF_UP, ROUND_HALF_EVEN
 from typing import Any, Dict
@@ -30,18 +31,12 @@ def render_template(template: str, params: Dict[str, Any]) -> str:
     1. Escapa TODAS las llaves LaTeX ({ -> {{, } -> }})
     2. Restaura ONLY placeholders reales {n}, {p}, etc.
     """
-
-    # 1. Escapar todas las llaves
     safe = template.replace("{", "{{").replace("}", "}}")
 
-    # 2. Restaurar SOLO placeholders reales
     for key in params.keys():
         safe = safe.replace("{{" + key + "}}", "{" + key + "}")
 
-    # 3. Convertir valores a strings seguros
     safe_params = {k: _to_string(v) for k, v in params.items()}
-
-    # 4. Aplicar format
     return safe.format(**safe_params)
 
 
@@ -61,46 +56,122 @@ SAFE_MATH_FUNCS = {
     "tan": math.tan,
     "pi": math.pi,
     "e": math.e,
-    "Phi": lambda z: 0.5 * (1 + math.erf(z / math.sqrt(2)))   # Normal CDF
+    "Phi": lambda z: 0.5 * (1 + math.erf(z / math.sqrt(2))),  # Normal CDF
+}
+
+# Necesarios para tus expression_symbolic: sum(... for x in range(...))
+SAFE_BUILTINS = {
+    "sum": sum,
+    "range": range,
+    "min": min,
+    "max": max,
+    "abs": abs,
 }
 
 
 # ---------------------------------------------------------
-# SYMBOLIC EXPRESSION EVALUATOR — FIXED VERSION
+# TYPE RESOLUTION (Pydantic o dict)
 # ---------------------------------------------------------
 
-def eval_symbolic_expression(expr: str, params: Dict[str, Any], q) -> float:
+def _get_param_type(q: Any, k: str) -> Any:
     """
-    Evalúa expresiones simbólicas (pueden tener múltiples statements).
-
-    FIX IMPORTANTE:
-        Convierte a entero todos los parámetros cuyo tipo en el JSON es "int".
-        Esto evita errores en factorial(), comb(), binom(), etc.
+    Retorna "int" o "float" si está definido en q.params[k].type
+    Soporta:
+      - q como Pydantic model (QuestionDefinition)
+      - q como dict (JSON crudo)
     """
+    try:
+        if q is None:
+            return None
 
-    statements = [s.strip() for s in expr.split(";") if s.strip()]
+        # Pydantic
+        if hasattr(q, "params") and q.params and k in q.params:
+            return getattr(q.params[k], "type", None)
 
-    local_vars = {}
+        # dict
+        if isinstance(q, dict) and "params" in q and k in q["params"]:
+            return q["params"][k].get("type")
 
-    # Convertir valores según corresponda (int / float)
+    except Exception:
+        return None
+
+    return None
+
+
+# ---------------------------------------------------------
+# SYMBOLIC EXPRESSION EVALUATOR (statements + expressions)
+# ---------------------------------------------------------
+
+def eval_symbolic_expression(expr: str, params: Dict[str, Any], q: Any = None) -> float:
+    """
+    Evalúa expression_symbolic con múltiples statements separados por ';'
+    y soporta genexpr/comprehensions (sum/range) sin NameError.
+
+    CLAVE:
+      - Usa UN SOLO dict `env` como globals y locals: eval(st, env, env)
+        (esto evita el bug de scopes en comprehensions con eval()).
+    """
+    statements = [s.strip() for s in (expr or "").split(";") if s.strip()]
+    if not statements:
+        raise ValueError("expression_symbolic vacío o inválido")
+
+    # Env único (globals=locals) para que comprehensions vean params
+    env: Dict[str, Any] = {
+        "__builtins__": {},
+        **SAFE_MATH_FUNCS,
+        **SAFE_BUILTINS,
+    }
+
+    # Cargar params tipados en env
     for k, v in params.items():
+        t = _get_param_type(q, k)
 
-        # Revisar si en el JSON está como entero
-        if k in q.params and q.params[k].type == "int":
-            local_vars[k] = int(round(v))
+        if t == "int":
+            env[k] = int(round(float(v)))
         else:
-            local_vars[k] = float(v)
+            if isinstance(v, int) and not isinstance(v, bool):
+                env[k] = v
+            else:
+                env[k] = float(v)
 
-    safe_globals = {"__builtins__": {}, **SAFE_MATH_FUNCS}
+    last_value = None
 
-    result = None
-    for st in statements:
-        result = eval(st, safe_globals, local_vars)
+    for i, st in enumerate(statements):
+        is_last = (i == len(statements) - 1)
 
-    if not isinstance(result, (int, float)):
-        raise ValueError(f"Expresión no produjo un número: {expr}")
+        try:
+            # Expresión (incluye sum(... for x in range(...)))
+            last_value = eval(st, env, env)
 
-    return float(result)
+        except SyntaxError:
+            # Statement (asignación, etc.)
+            exec(st, env, env)
+            last_value = None
+
+            # Si el último statement fue asignación, intenta devolver algo útil
+            if is_last:
+                if "result" in env:
+                    last_value = env["result"]
+                else:
+                    # intenta identificar variable asignada (n=..., z=..., etc.)
+                    try:
+                        node = ast.parse(st)
+                        assigns = [
+                            n for n in node.body
+                            if isinstance(n, (ast.Assign, ast.AnnAssign))
+                        ]
+                        if assigns:
+                            a = assigns[-1]
+                            target = a.targets[0] if isinstance(a, ast.Assign) else a.target
+                            if isinstance(target, ast.Name) and target.id in env:
+                                last_value = env[target.id]
+                    except Exception:
+                        pass
+
+    if not isinstance(last_value, (int, float)):
+        raise ValueError(f"Expresión no produjo un número: {expr} -> got={type(last_value)}")
+
+    return float(last_value)
 
 
 # ---------------------------------------------------------
@@ -109,7 +180,7 @@ def eval_symbolic_expression(expr: str, params: Dict[str, Any], q) -> float:
 
 ROUNDING_MODES = {
     "half_up": ROUND_HALF_UP,
-    "half_even": ROUND_HALF_EVEN
+    "half_even": ROUND_HALF_EVEN,
 }
 
 
@@ -121,24 +192,26 @@ def format_numeric(value: float, spec: Dict[str, Any]) -> str:
     n_dec = spec.get("decimals", 4)
     rounding = spec.get("rounding", "half_up")
 
-    q = Decimal(str(value)).quantize(
+    q_dec = Decimal(str(value)).quantize(
         Decimal("1." + ("0" * n_dec)),
-        rounding=ROUNDING_MODES.get(rounding, ROUND_HALF_UP)
+        rounding=ROUNDING_MODES.get(rounding, ROUND_HALF_UP),
     )
 
-    return str(q)
+    return str(q_dec)
 
 
 # ---------------------------------------------------------
 # MASTER RENDER FOR EACH MATH RESULT
 # ---------------------------------------------------------
 
-def render_math_result(math_def: Dict[str, Any], params: Dict[str, Any], q) -> Dict[str, Any]:
-
+def render_math_result(math_def: Dict[str, Any], params: Dict[str, Any], q: Any = None) -> Dict[str, Any]:
     expr_latex = render_template(math_def["expression_latex_template"], params)
 
-    # 👉 AHORA eval recibe "q"
-    raw_value = eval_symbolic_expression(math_def["expression_symbolic"], params, q)
+    expr_sym = math_def.get("expression_symbolic")
+    if not expr_sym:
+        raise ValueError(f"math result '{math_def.get('id')}' no tiene expression_symbolic")
+
+    raw_value = eval_symbolic_expression(expr_sym, params, q)
 
     numeric_fmt = math_def.get("numeric_format", {"type": "decimal", "decimals": 4})
     formatted = format_numeric(raw_value, numeric_fmt)
@@ -149,5 +222,5 @@ def render_math_result(math_def: Dict[str, Any], params: Dict[str, Any], q) -> D
         "general_formula_latex": math_def["general_formula_latex"],
         "expression_latex": expr_latex,
         "numeric_value": formatted,
-        "raw_numeric": raw_value
+        "raw_numeric": raw_value,
     }

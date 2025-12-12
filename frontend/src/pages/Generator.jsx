@@ -18,7 +18,8 @@ export default function Generator() {
   useEffect(() => {
     fetch("http://127.0.0.1:8000/questions")
       .then((r) => r.json())
-      .then((data) => setQuestions(data));
+      .then((data) => setQuestions(data))
+      .catch((e) => console.error("Error cargando /questions:", e));
   }, []);
 
   // Resolve min/max cuando hay dependencias dinámicas
@@ -26,11 +27,17 @@ export default function Generator() {
     if (!paramRanges || !customParams) return { min: null, max: null };
 
     const rule = paramRanges[key];
+    if (!rule) return { min: null, max: null };
+
     let minVal = rule.min;
     let maxVal = rule.max;
 
     if (typeof minVal === "string") minVal = customParams[minVal];
     if (typeof maxVal === "string") maxVal = customParams[maxVal];
+
+    // fallback por si quedan null/undefined
+    if (minVal === undefined || minVal === null) minVal = 0;
+    if (maxVal === undefined || maxVal === null) maxVal = 1;
 
     return { min: minVal, max: maxVal };
   }
@@ -44,15 +51,19 @@ export default function Generator() {
     const qInfo = questions.find((q) => q.id === selected);
     if (!qInfo) return;
 
-    setResolvedId(selected);
+    try {
+      setResolvedId(selected);
 
-    // Guardamos ranges del JSON
-    const fullData = await backend.getFullQuestion(selected);
-    setParamRanges(fullData.params);
+      // Guardamos ranges del JSON
+      const fullData = await backend.getFullQuestion(selected);
+      setParamRanges(fullData.params);
 
-    const data = await backend.generateProblem(selected, null, "repaso");
-    setResult(data);
-    setCustomParams(data.params);
+      const data = await backend.generateProblem(selected, null, "repaso");
+      setResult(data);
+      setCustomParams(data.params);
+    } catch (e) {
+      console.error("Error generando ejercicio:", e);
+    }
   }
 
   // ------------------------------
@@ -60,10 +71,10 @@ export default function Generator() {
   // ------------------------------
   function updateParam(key, value) {
     const numeric = Number(value);
-    setCustomParams({
-      ...customParams,
-      [key]: isNaN(numeric) ? value : numeric
-    });
+    setCustomParams((prev) => ({
+      ...(prev || {}),
+      [key]: isNaN(numeric) ? value : numeric,
+    }));
   }
 
   // ------------------------------
@@ -71,8 +82,13 @@ export default function Generator() {
   // ------------------------------
   async function handleSolveCustom() {
     if (!resolvedId || !customParams) return;
-    const data = await backend.generateProblem(resolvedId, customParams, "repaso");
-    setResult(data);
+
+    try {
+      const data = await backend.generateProblem(resolvedId, customParams, "repaso");
+      setResult(data);
+    } catch (e) {
+      console.error("Error resolviendo con params personalizados:", e);
+    }
   }
 
   return (
@@ -102,7 +118,11 @@ export default function Generator() {
           ))}
         </select>
 
-        <button className="btn btn-primary" onClick={handleGenerate} style={{ marginTop: "18px" }}>
+        <button
+          className="btn btn-primary"
+          onClick={handleGenerate}
+          style={{ marginTop: "18px" }}
+        >
           Generar ejercicio
         </button>
       </div>
@@ -112,8 +132,10 @@ export default function Generator() {
         <div className="card" style={{ marginTop: "25px" }}>
           <h3>Enunciado</h3>
 
-          {/* Render LaTeX del enunciado */}
-          <TeX math={result.statement} block />
+          {/* ✅ Enunciado es texto normal (NO KaTeX) */}
+          <p style={{ whiteSpace: "pre-wrap", marginTop: "10px", lineHeight: 1.5 }}>
+            {result.statement}
+          </p>
 
           {/* PARÁMETROS EDITABLES */}
           <h4 style={{ marginTop: "30px" }}>Modificar parámetros</h4>
@@ -122,18 +144,23 @@ export default function Generator() {
             Object.keys(customParams).map((key) => {
               const { min, max } = resolveRange(key);
 
+              const rule = paramRanges?.[key];
+              const isInt = rule?.type === "int";
+
               return (
                 <div key={key} style={{ marginBottom: "25px" }}>
                   <label style={{ fontWeight: "600" }}>
                     {key}: {customParams[key]}{" "}
-                    <span style={{ color: "#777" }}>({min} – {max})</span>
+                    <span style={{ color: "#777" }}>
+                      ({min} – {max})
+                    </span>
                   </label>
 
                   <input
                     type="range"
                     min={min}
                     max={max}
-                    step="any"
+                    step={isInt ? 1 : "any"}
                     value={customParams[key]}
                     onChange={(e) => updateParam(key, e.target.value)}
                     style={{ width: "100%" }}
@@ -144,6 +171,7 @@ export default function Generator() {
                     value={customParams[key]}
                     min={min}
                     max={max}
+                    step={isInt ? 1 : "any"}
                     onChange={(e) => updateParam(key, e.target.value)}
                     style={{ width: "140px", marginTop: "6px" }}
                   />
@@ -167,7 +195,7 @@ export default function Generator() {
                 background: "#eef4ff",
                 padding: "14px",
                 borderRadius: "8px",
-                marginBottom: "15px"
+                marginBottom: "15px",
               }}
             >
               <strong>{res.label}</strong>
@@ -190,8 +218,10 @@ export default function Generator() {
           {result.doc_url && (
             <>
               <h4>📚 Documentación</h4>
+              {/* ✅ doc_url es string */}
               <a href={result.doc_url} target="_blank" rel="noreferrer">
-                Ver documentación completa - Nota: La documentacion se encuentra en multiples lenguajes, la traduccion de esta se encuentra fuera del rango de la aplicacion
+                Ver documentación completa - Nota: La documentacion se encuentra en multiples lenguajes, la
+                traduccion de esta se encuentra fuera del rango de la aplicacion
               </a>
               <p style={{ marginTop: "10px" }}>{result.doc_summary}</p>
             </>

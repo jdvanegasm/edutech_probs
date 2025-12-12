@@ -87,12 +87,12 @@ export default function Home() {
         </h3>
 
         <p style={{ color: "#555", fontSize: "16px", lineHeight: "1.6" }}>
-          Desarrollado por <strong>Juan Daniel Vanegas Mayorquín</strong> y{" "}
-          <strong>Juan Sebastián Colorado Caro</strong>.
+          Desarrollado por <strong>Juan Daniel Vanegas Mayorquín - 20222020077</strong> y{" "}
+          <strong>Juan Sebastián Colorado Caro - 20202673001</strong>.
           <br />
           Año <strong>2025 - 3</strong>.
           <br />
-          Para la asignatura de <strong>Probabilidad</strong> con el docente <strong>Fernando Leon Pradera</strong>.
+          Para la asignatura de <strong>Probabilidad</strong> con el docente <strong>Fernando Leon Parada Doctor en Educación Matemática DIE-UD</strong>.
           <br />
           <strong>Ingeniería de Sistemas</strong> - Facultad de Ingeniería.
         </p>

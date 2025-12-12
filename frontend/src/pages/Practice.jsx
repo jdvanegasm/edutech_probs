@@ -91,12 +91,12 @@ export default function Practice() {
           {problem.doc_url && (
             <p style={{ marginTop: "20px" }}>
               <a
-                href={problem.doc_url}
+                href={problem.doc_url.value}
                 target="_blank"
                 rel="noopener noreferrer"
                 style={{ fontWeight: "600" }}
               >
-                📚 Ver documentación completa - Nota: La documentacion se encuentra en multiples lenguajes, la traduccion de esta se encuentra fuera del rango de la aplicacion.
+                📚 Ver documentación completa ({problem.doc_url}) - Nota: La documentacion se encuentra en multiples lenguajes, la traduccion de esta se encuentra fuera del rango de la aplicacion.
               </a>
             </p>
           )}

@@ -1,6 +1,6 @@
 import json
 import random
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from typing import Dict, Any
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -14,7 +14,7 @@ from models.question_models import (
     GeneratedProblemLatex
 )
 
-from solvers import SOLVER_REGISTRY
+from solvers import SOLVER_REGISTRY  # (si no lo usas aún, lo puedes quitar)
 from utils.clean_params import clean_params_for_question
 from utils.render import render_template, render_math_result
 
@@ -93,13 +93,24 @@ def list_questions():
     ]
 
 
+# ✅ NUEVO: Traer pregunta completa (para ranges/params en el frontend)
+@app.get("/questions/{qid}")
+def get_full_question(qid: str):
+    q = QUESTIONS.get(qid)
+    if not q:
+        raise HTTPException(status_code=404, detail="Question not found")
+    return q.model_dump()
+
+
 # ======================================
 # GENERATE PROBLEM
 # ======================================
 @app.post("/generate-problem")
 def generate_problem(req: ProblemRequest):
 
-    q = QUESTIONS[req.id]
+    q = QUESTIONS.get(req.id)
+    if not q:
+        raise HTTPException(status_code=404, detail="Question not found")
 
     # 1. parámetros
     params = req.params_override or generate_params_for_question(q)
@@ -111,7 +122,6 @@ def generate_problem(req: ProblemRequest):
     # 3. Procesar resultados matemáticos
     results_output = []
     for r in q.math.results:
-        # AHORA se pasa q
         rendered = render_math_result(r.model_dump(), params, q)
 
         results_output.append(
@@ -145,7 +155,7 @@ def generate_test(req: TestRequest):
     valid_ids = [qid for qid, q in QUESTIONS.items() if solver_is_numeric(q)]
 
     if req.num_questions > len(valid_ids):
-        raise ValueError("No hay suficientes preguntas numéricas para test.")
+        raise HTTPException(status_code=400, detail="No hay suficientes preguntas numéricas para test.")
 
     selected = random.sample(valid_ids, req.num_questions)
     output = []
@@ -160,8 +170,6 @@ def generate_test(req: TestRequest):
 
         # Solo 1 resultado
         r = q.math.results[0]
-
-        # AHORA se pasa q
         rendered = render_math_result(r.model_dump(), params, q)
 
         correct_val = rendered["numeric_value"]
@@ -197,6 +205,9 @@ def generate_test(req: TestRequest):
 def grade_test(req: GradeRequest):
 
     total = len(req.answers)
+    if total == 0:
+        raise HTTPException(status_code=400, detail="No hay respuestas para calificar.")
+
     correct = 0
     details = []
 
